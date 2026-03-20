@@ -1,8 +1,11 @@
-import { render, screen } from '@testing-library/react';
-import App from './App';
+import { render, screen } from "@testing-library/react";
+import App from "./App";
 
-test('renders learn react link', () => {
+/**
+ * Basic smoke test to confirm the checkout form renders.
+ */
+test("renders checkout form heading", () => {
   render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+  const headingElement = screen.getByText(/build checkout from form data/i);
+  expect(headingElement).toBeInTheDocument();
 });

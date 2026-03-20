@@ -1,1 +1,4 @@
-
+{
+  "name": "payment-gateway-using-stripe",
+  "private": true
+}

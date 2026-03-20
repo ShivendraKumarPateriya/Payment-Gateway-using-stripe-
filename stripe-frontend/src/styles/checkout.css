@@ -1,0 +1,247 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+:root {
+  --text-strong: #102542;
+  --text-soft: #3b556f;
+  --accent: #067f73;
+  --accent-hover: #05645c;
+  --surface: rgba(255, 255, 255, 0.9);
+  --surface-border: rgba(255, 255, 255, 0.75);
+  --input-border: #bfd0de;
+  --success: #057a55;
+  --warning: #9d4f00;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.checkout-page {
+  min-height: 100vh;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  padding: 28px 16px;
+  background:
+    radial-gradient(circle at 8% 18%, #ffd8a6 0%, transparent 30%),
+    radial-gradient(circle at 88% 82%, #bde6ff 0%, transparent 34%),
+    linear-gradient(135deg, #f3f7ff 0%, #e7f5f2 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.checkout-page::before {
+  content: "";
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: rgba(255, 210, 173, 0.45);
+  left: -70px;
+  bottom: -60px;
+  filter: blur(6px);
+  animation: drift 8s ease-in-out infinite;
+}
+
+.checkout-page::after {
+  content: "";
+  position: absolute;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  background: rgba(175, 228, 255, 0.5);
+  right: -70px;
+  top: -60px;
+  filter: blur(6px);
+  animation: drift 10s ease-in-out infinite reverse;
+}
+
+.checkout-card {
+  width: min(760px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: 28px;
+  box-shadow: 0 20px 60px rgba(16, 37, 66, 0.15);
+  padding: 34px;
+  color: var(--text-strong);
+  position: relative;
+  z-index: 1;
+  animation: rise-in 520ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.checkout-card h1 {
+  margin: 14px 0 8px;
+  font-size: clamp(1.55rem, 3vw, 2.1rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.checkout-card p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.98rem;
+  line-height: 1.55;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(6, 127, 115, 0.1);
+  color: var(--accent);
+}
+
+.checkout-form {
+  margin-top: 22px;
+  display: grid;
+  gap: 14px;
+}
+
+.field-row {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.field-group {
+  display: grid;
+  gap: 7px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.field-group input,
+.field-group select,
+.field-group textarea {
+  border: 1px solid var(--input-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+  color: var(--text-strong);
+  background: #ffffff;
+}
+
+.field-group textarea {
+  resize: vertical;
+}
+
+.field-group input:focus,
+.field-group select:focus,
+.field-group textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(6, 127, 115, 0.2);
+  outline: none;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.92rem;
+  color: var(--text-soft);
+}
+
+.checkbox-row input {
+  accent-color: var(--accent);
+}
+
+.cta-button {
+  margin-top: 8px;
+  border: 0;
+  border-radius: 14px;
+  padding: 13px 18px;
+  width: 100%;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, #0e9788 0%, #05645c 100%);
+  box-shadow: 0 10px 24px rgba(5, 100, 92, 0.28);
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+}
+
+.cta-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(5, 100, 92, 0.32);
+}
+
+.cta-button:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cta-button.secondary {
+  background: linear-gradient(135deg, #1b3b5a 0%, #102542 100%);
+  box-shadow: 0 10px 24px rgba(16, 37, 66, 0.28);
+}
+
+.success-card .status-badge {
+  background: rgba(5, 122, 85, 0.12);
+  color: var(--success);
+}
+
+.cancel-card .status-badge {
+  background: rgba(157, 79, 0, 0.12);
+  color: var(--warning);
+}
+
+.session-id {
+  margin-top: 14px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.82rem;
+  background: rgba(16, 37, 66, 0.06);
+  border-radius: 10px;
+  padding: 10px;
+  overflow-wrap: anywhere;
+}
+
+.error-message {
+  margin-top: 16px;
+  color: #ad1f1f;
+  font-weight: 600;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes drift {
+  0% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 760px) {
+  .checkout-card {
+    padding: 26px 20px;
+    border-radius: 22px;
+  }
+
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+}
