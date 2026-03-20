@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import stripe
 from fastapi import APIRouter, Body, Depends, HTTPException
+from sqlalchemy.orm import Session
 
 from backend.app.core import AppSettings, get_settings
+from backend.app.db import get_db_session
 from backend.app.schemas import (
     CheckoutDefaultsResponse,
     CheckoutItemPayload,
@@ -72,6 +74,7 @@ def checkout_defaults(settings: AppSettings = Depends(get_settings)) -> Checkout
 def create_checkout_session(
     payload: CheckoutSessionCreateRequest | None = Body(default=None),
     settings: AppSettings = Depends(get_settings),
+    db_session: Session = Depends(get_db_session),
 ) -> CheckoutSessionResponse:
     """Create a Stripe-hosted checkout session from frontend-provided data.
 
@@ -83,11 +86,16 @@ def create_checkout_session(
     service = StripeCheckoutService(settings)
 
     try:
-        return service.create_checkout_session(checkout_payload)
+        return service.create_checkout_session(checkout_payload, db_session)
     except ValueError as error:
+        db_session.rollback()
         raise HTTPException(status_code=400, detail=str(error)) from error
     except stripe.StripeError as error:
+        db_session.rollback()
         raise HTTPException(status_code=502, detail=_stripe_error_message(error)) from error
+    except Exception as error:
+        db_session.rollback()
+        raise HTTPException(status_code=500, detail="Unexpected server error.") from error
 
 
 @router.post("/create-payment-intent", response_model=PaymentIntentResponse)

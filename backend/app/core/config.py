@@ -9,11 +9,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from functools import lru_cache
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
 # Load `.env` values so local development works out of the box.
 load_dotenv()
+
+# Project root directory (one level above `backend/`).
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
 @dataclass(frozen=True)
@@ -21,6 +25,8 @@ class AppSettings:
     """Runtime settings used across API routes and Stripe services."""
 
     stripe_secret_key: str
+    stripe_webhook_secret: str | None
+    database_url: str
     frontend_base_url: str
     frontend_origins: list[str]
     default_currency: str
@@ -68,6 +74,31 @@ def _read_origins_env(name: str, default: str) -> list[str]:
     return origins
 
 
+def _default_sqlite_url() -> str:
+    """Build default SQLite URL using an absolute project-root file path."""
+
+    sqlite_file = (PROJECT_ROOT / "stripe_payments.db").resolve()
+    return f"sqlite:///{sqlite_file}"
+
+
+def _normalize_database_url(database_url: str) -> str:
+    """Normalize DB URL so relative SQLite paths resolve to project root.
+
+    This prevents accidental creation of multiple SQLite files when
+    uvicorn is started from different working directories.
+    """
+
+    if not database_url.startswith("sqlite:///"):
+        return database_url
+
+    raw_path = database_url.removeprefix("sqlite:///")
+    if raw_path.startswith("/"):
+        return database_url
+
+    normalized_path = (PROJECT_ROOT / raw_path).resolve()
+    return f"sqlite:///{normalized_path}"
+
+
 @lru_cache(maxsize=1)
 def get_settings() -> AppSettings:
     """Load settings once and share them across the whole application.
@@ -77,6 +108,10 @@ def get_settings() -> AppSettings:
 
     return AppSettings(
         stripe_secret_key=_require_env("STRIPE_SECRET_KEY"),
+        stripe_webhook_secret=os.getenv("STRIPE_WEBHOOK_SECRET"),
+        database_url=_normalize_database_url(
+            os.getenv("DATABASE_URL", _default_sqlite_url())
+        ),
         frontend_base_url=os.getenv("FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/"),
         frontend_origins=_read_origins_env("FRONTEND_ORIGINS", "http://localhost:3000"),
         default_currency=os.getenv("DEFAULT_CURRENCY", "usd").lower(),

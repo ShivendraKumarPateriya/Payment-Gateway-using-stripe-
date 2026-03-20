@@ -64,7 +64,7 @@ export async function fetchCheckoutDefaults() {
  * Create a new Stripe Checkout Session.
  *
  * @param {object} payload - Validated checkout payload ready for backend.
- * @returns {Promise<{id: string, url: string}>} Stripe checkout session data.
+ * @returns {Promise<{id: string, url: string, order_id: string}>} Stripe checkout session data.
  */
 export async function createCheckoutSession(payload) {
   const response = await fetchWithTimeout(`${API_BASE_URL}/create-checkout-session`, {
@@ -73,5 +73,17 @@ export async function createCheckoutSession(payload) {
     body: JSON.stringify(payload),
   });
 
+  return parseJsonResponse(response);
+}
+
+/**
+ * Fetch persisted order state using Stripe Checkout Session ID.
+ *
+ * @param {string} sessionId - Stripe checkout session ID from success URL.
+ * @returns {Promise<object>} Order row saved in backend database.
+ */
+export async function fetchOrderBySessionId(sessionId) {
+  const encodedSessionId = encodeURIComponent(sessionId);
+  const response = await fetchWithTimeout(`${API_BASE_URL}/orders/by-session/${encodedSessionId}`);
   return parseJsonResponse(response);
 }

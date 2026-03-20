@@ -25,6 +25,19 @@ const FALLBACK_FORM_VALUES = {
 };
 
 /**
+ * Conservative minimum totals in smallest currency units.
+ * These values prevent common Stripe "minimum charge" errors.
+ */
+const MINIMUM_TOTAL_BY_CURRENCY = {
+  usd: 50,
+  eur: 50,
+  gbp: 30,
+  cad: 50,
+  aud: 50,
+  inr: 5000,
+};
+
+/**
  * Parse positive integer fields from text inputs.
  *
  * @param {string} rawValue - Input value from form state.
@@ -59,6 +72,13 @@ function buildCheckoutPayload(formValues) {
   const productName = (formValues.productName || "").trim();
   if (!productName) {
     throw new Error("Product name is required.");
+  }
+
+  const minimumTotal = MINIMUM_TOTAL_BY_CURRENCY[currency];
+  if (minimumTotal && amount * quantity < minimumTotal) {
+    throw new Error(
+      `For ${currency.toUpperCase()}, total must be at least ${minimumTotal} in the smallest unit.`
+    );
   }
 
   return {

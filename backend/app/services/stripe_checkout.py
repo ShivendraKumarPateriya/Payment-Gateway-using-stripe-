@@ -7,8 +7,10 @@ so route handlers remain short and easier to follow.
 from __future__ import annotations
 
 import stripe
+from sqlalchemy.orm import Session
 
 from backend.app.core import AppSettings
+from backend.app.db import Order, OrderStatus
 from backend.app.schemas import (
     CheckoutSessionCreateRequest,
     CheckoutSessionResponse,
@@ -20,6 +22,18 @@ from backend.app.schemas import (
 class StripeCheckoutService:
     """Service object that wraps Stripe API calls used by this project."""
 
+    # Conservative minimum totals in the smallest currency unit.
+    # These values avoid Stripe's "must convert to at least 50 cents" errors
+    # for common currencies used in this demo.
+    MINIMUM_TOTAL_BY_CURRENCY = {
+        "usd": 50,    # $0.50
+        "eur": 50,    # €0.50
+        "gbp": 30,    # £0.30
+        "cad": 50,    # C$0.50
+        "aud": 50,    # A$0.50
+        "inr": 5000,  # ₹50.00 (safe floor for USD-conversion rule)
+    }
+
     def __init__(self, settings: AppSettings) -> None:
         """Initialize Stripe client configuration from application settings."""
 
@@ -27,42 +41,67 @@ class StripeCheckoutService:
         stripe.api_key = settings.stripe_secret_key
 
     def create_checkout_session(
-        self, payload: CheckoutSessionCreateRequest
+        self, payload: CheckoutSessionCreateRequest, db_session: Session
     ) -> CheckoutSessionResponse:
-        """Create a hosted Stripe Checkout Session from validated request data."""
+        """Create order + hosted Stripe Checkout Session from request data."""
 
         self._validate_amount(payload.item.unit_amount)
         self._validate_quantity(payload.item.quantity)
+        self._validate_total_amount(
+            amount=payload.item.unit_amount,
+            quantity=payload.item.quantity,
+            currency=payload.item.currency,
+        )
+
+        order = self._create_order_record(payload, db_session)
 
         success_url = self._build_success_url(payload.success_path)
         cancel_url = self._build_cancel_url(payload.cancel_path)
 
-        session = stripe.checkout.Session.create(
-            mode="payment",
-            payment_method_types=["card"],
-            line_items=[
-                {
-                    "price_data": {
-                        "currency": payload.item.currency,
-                        "product_data": {
-                            "name": payload.item.product_name,
-                            "description": payload.item.description,
+        try:
+            session = stripe.checkout.Session.create(
+                mode="payment",
+                payment_method_types=["card"],
+                line_items=[
+                    {
+                        "price_data": {
+                            "currency": payload.item.currency,
+                            "product_data": {
+                                "name": payload.item.product_name,
+                                "description": payload.item.description,
+                            },
+                            "unit_amount": payload.item.unit_amount,
                         },
-                        "unit_amount": payload.item.unit_amount,
-                    },
-                    "quantity": payload.item.quantity,
-                }
-            ],
-            allow_promotion_codes=payload.allow_promotion_codes,
-            customer_email=payload.customer_email,
-            success_url=success_url,
-            cancel_url=cancel_url,
-        )
+                        "quantity": payload.item.quantity,
+                    }
+                ],
+                allow_promotion_codes=payload.allow_promotion_codes,
+                customer_email=payload.customer_email,
+                client_reference_id=order.id,
+                metadata={
+                    "order_id": order.id,
+                    "product_name": payload.item.product_name,
+                },
+                success_url=success_url,
+                cancel_url=cancel_url,
+            )
+        except stripe.StripeError as error:
+            order.status = OrderStatus.PAYMENT_FAILED.value
+            order.failure_reason = error.user_message or str(error)
+            db_session.add(order)
+            db_session.commit()
+            raise
 
         if not session.url:
             raise RuntimeError("Stripe session URL was not returned by Stripe API.")
 
-        return CheckoutSessionResponse(id=session.id, url=session.url)
+        order.checkout_session_id = session.id
+        order.status = OrderStatus.PENDING.value
+        db_session.add(order)
+        db_session.commit()
+        db_session.refresh(order)
+
+        return CheckoutSessionResponse(id=session.id, url=session.url, order_id=order.id)
 
     def create_payment_intent(
         self, payload: PaymentIntentCreateRequest
@@ -121,6 +160,41 @@ class StripeCheckoutService:
             raise ValueError(
                 f"Quantity exceeds max allowed value ({self.settings.max_quantity})."
             )
+
+    def _validate_total_amount(self, amount: int, quantity: int, currency: str) -> None:
+        """Validate order total against known Stripe minimum amounts."""
+
+        minimum_total = self.MINIMUM_TOTAL_BY_CURRENCY.get(currency.lower())
+        if minimum_total is None:
+            return
+
+        order_total = amount * quantity
+        if order_total < minimum_total:
+            raise ValueError(
+                "Order total is below Stripe minimum for this currency. "
+                f"Minimum total for {currency.upper()} is {minimum_total} in the smallest unit."
+            )
+
+    def _create_order_record(
+        self, payload: CheckoutSessionCreateRequest, db_session: Session
+    ) -> Order:
+        """Persist initial order row before redirecting customer to Stripe checkout."""
+
+        order = Order(
+            status=OrderStatus.CREATED.value,
+            product_name=payload.item.product_name,
+            unit_amount=payload.item.unit_amount,
+            quantity=payload.item.quantity,
+            total_amount=payload.item.unit_amount * payload.item.quantity,
+            currency=payload.item.currency,
+            description=payload.item.description,
+            customer_email=payload.customer_email,
+        )
+
+        db_session.add(order)
+        db_session.commit()
+        db_session.refresh(order)
+        return order
 
 
 __all__ = ["StripeCheckoutService"]

@@ -6,6 +6,8 @@ frontend and backend.
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -119,6 +121,7 @@ class CheckoutSessionResponse(BaseModel):
 
     id: str = Field(..., description="Stripe Checkout Session ID.")
     url: str = Field(..., description="Stripe hosted checkout URL.")
+    order_id: str = Field(..., description="Internal order ID persisted in database.")
 
 
 class PaymentIntentCreateRequest(BaseModel):
@@ -157,3 +160,32 @@ class CheckoutDefaultsResponse(BaseModel):
     unit_amount: int = Field(..., description="Default amount in smallest currency unit.")
     quantity: int = Field(..., description="Default quantity.")
     currency: str = Field(..., description="Default currency code.")
+
+
+class OrderResponse(BaseModel):
+    """Public order payload returned by order status endpoints."""
+
+    id: str = Field(..., description="Internal order UUID.")
+    status: str = Field(..., description="Current order lifecycle status.")
+    product_name: str = Field(..., description="Name shown during checkout.")
+    unit_amount: int = Field(..., description="Single-item price in smallest unit.")
+    quantity: int = Field(..., description="Number of units ordered.")
+    total_amount: int = Field(..., description="Total amount charged.")
+    currency: str = Field(..., description="Three-letter ISO currency code.")
+    description: str | None = Field(None, description="Optional product description.")
+    customer_email: str | None = Field(None, description="Customer email from checkout.")
+    checkout_session_id: str | None = Field(None, description="Stripe checkout session ID.")
+    payment_intent_id: str | None = Field(None, description="Stripe payment intent ID.")
+    stripe_customer_id: str | None = Field(None, description="Stripe customer ID.")
+    failure_reason: str | None = Field(None, description="Reason for failed payment if present.")
+    paid_at: datetime | None = Field(None, description="Timestamp when order was paid.")
+    created_at: datetime = Field(..., description="Order creation timestamp.")
+    updated_at: datetime = Field(..., description="Last update timestamp.")
+
+
+class WebhookAckResponse(BaseModel):
+    """Response returned by webhook endpoint after event processing."""
+
+    received: bool = Field(..., description="Whether event payload was accepted.")
+    duplicate: bool = Field(..., description="True when event was already processed.")
+    event_id: str = Field(..., description="Stripe event identifier.")

@@ -28,6 +28,10 @@ function CheckoutForm({
         Change values below, then click pay. Backend receives this form data and creates a
         Stripe session dynamically. Redirect paths are handled automatically by backend.
       </p>
+      <p className="micro-note">
+        Note: Stripe enforces minimum charge amounts. Example: for INR, keep total at least
+        5000 (smallest unit).
+      </p>
 
       <form className="checkout-form" onSubmit={onSubmit}>
         <label className="field-group" htmlFor="productName">

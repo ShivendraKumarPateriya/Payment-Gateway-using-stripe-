@@ -9,8 +9,9 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.app.api.routes import checkout_router
+from backend.app.api.routes import checkout_router, orders_router, webhooks_router
 from backend.app.core import get_settings
+from backend.app.db import Base, get_engine
 
 # Load environment variables from the project .env file (if present).
 load_dotenv()
@@ -38,7 +39,13 @@ def create_application() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # For this educational project we create tables automatically.
+    # In production, prefer Alembic migrations for schema changes.
+    Base.metadata.create_all(bind=get_engine())
+
     app.include_router(checkout_router)
+    app.include_router(orders_router)
+    app.include_router(webhooks_router)
     return app
 
 

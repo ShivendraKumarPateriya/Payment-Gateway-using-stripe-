@@ -1,75 +1,105 @@
-# Stripe Checkout Demo (Structured Version)
+# Stripe Payment Gateway (FastAPI + React)
 
-This project is a beginner-friendly Stripe payment demo with a **FastAPI backend** and **React frontend**.
+This project is a beginner-friendly Stripe integration that now includes:
 
-## What Changed
+- dynamic checkout creation
+- webhook signature verification
+- idempotent webhook processing
+- PostgreSQL-backed order/payment persistence
+- order status APIs connected to frontend success page
 
-- Removed hardcoded checkout amount/product values from code.
-- Backend now accepts checkout data sent from frontend form.
-- Added backend defaults from environment variables.
-- Refactored code into a clean folder structure with service layer and schemas.
-- Added docstrings/JSDoc comments for easier learning and maintenance.
+## Full Learning Document
 
-## Project Structure
+Read this for full end-to-end explanation (Lessons 8 and 9 + production pitfalls):
+
+- `docs/STRIPE_PAYMENT_SYSTEM_GUIDE.md`
+
+## Updated Backend Structure
 
 ```text
 backend/
   app/
-    api/routes/checkout.py       # HTTP endpoints
-    core/config.py               # Environment settings
-    schemas/checkout.py          # Request/response validation models
-    services/stripe_checkout.py  # Stripe business logic
-    main.py                      # App creation
-  main.py                        # Compatibility entrypoint (backend.main:app)
-
-stripe-frontend/src/
-  components/checkout/           # Reusable UI pieces
-  config/environment.js          # Frontend env config
-  pages/                         # Start/success/cancel views
-  services/checkoutApi.js        # API helper functions
-  styles/checkout.css            # Page styling
-  App.js                         # Main controller
+    api/routes/
+      checkout.py
+      orders.py
+      webhooks.py
+    core/config.py
+    db/
+      base.py
+      models.py
+      session.py
+    schemas/checkout.py
+    services/
+      order_service.py
+      stripe_checkout.py
+      webhook_service.py
+    main.py
+  main.py
 ```
 
-## Environment Setup
+## Updated Frontend Structure
 
-1. Copy `.env.example` to `.env` and fill `STRIPE_SECRET_KEY`.
-2. Copy `stripe-frontend/.env.example` to `stripe-frontend/.env`.
+```text
+stripe-frontend/src/
+  components/checkout/
+  config/environment.js
+  pages/
+  services/checkoutApi.js
+  styles/checkout.css
+  App.js
+```
 
-## Run Backend
+## Quick Start
+
+1. Install backend dependencies:
+
+```bash
+./myenv/bin/pip install -r requirements.txt
+```
+
+2. Configure environment:
+
+```bash
+cp .env.example .env
+cp stripe-frontend/.env.example stripe-frontend/.env
+```
+
+3. Start backend:
 
 ```bash
 ./myenv/bin/python -m uvicorn backend.main:app --reload --port 8000
 ```
 
-## Run Frontend
+4. Start frontend:
 
 ```bash
 cd stripe-frontend
 npm start
 ```
 
-## API Endpoints
+## Main API Endpoints
 
-- `GET /health`: backend health check
-- `GET /checkout-defaults`: default form values from backend settings
-- `POST /create-checkout-session`: create Stripe Checkout session from frontend payload
-- `POST /create-payment-intent`: create PaymentIntent for custom card flows
+- `GET /health`
+- `GET /checkout-defaults`
+- `POST /create-checkout-session`
+- `POST /create-payment-intent`
+- `GET /orders/{order_id}`
+- `GET /orders/by-session/{checkout_session_id}`
+- `POST /webhooks/stripe`
 
-## Example Checkout Payload
+## Important Notes
 
-```json
-{
-  "item": {
-    "product_name": "Starter Plan",
-    "unit_amount": 2500,
-    "quantity": 2,
-    "currency": "usd",
-    "description": "One-time setup payment"
-  },
-  "customer_email": "customer@example.com",
-  "success_path": "/success",
-  "cancel_path": "/cancel",
-  "allow_promotion_codes": true
-}
-```
+- Frontend redirect success is not the payment source of truth.
+- Webhooks are the source of truth for final payment state.
+- For real deployments, use PostgreSQL and set `STRIPE_WEBHOOK_SECRET`.
+- If an order is still `pending`, ensure Stripe webhook forwarding/secret is configured.
+- As a resilience fallback, order status endpoints now perform Stripe reconciliation for non-terminal orders.
+
+## DBeaver: Where Are My Tables?
+
+- If `DATABASE_URL` is **not set**, backend uses SQLite file:
+  - `stripe_payments.db` in project root.
+- If `DATABASE_URL` points to PostgreSQL, tables are created in that PostgreSQL database.
+- Tables created by this project:
+  - `orders`
+  - `stripe_webhook_events`

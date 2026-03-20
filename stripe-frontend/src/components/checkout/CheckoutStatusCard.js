@@ -11,6 +11,7 @@ import React from "react";
  * @param {string} props.buttonLabel - Button text.
  * @param {() => void} props.onButtonClick - Click handler.
  * @param {string | null} [props.sessionId] - Optional Stripe session id for debugging.
+ * @param {React.ReactNode} [props.children] - Optional extra content below description.
  * @returns {JSX.Element} Status card.
  */
 function CheckoutStatusCard({
@@ -21,12 +22,15 @@ function CheckoutStatusCard({
   buttonLabel,
   onButtonClick,
   sessionId,
+  children,
 }) {
   return (
     <section className={`checkout-card ${variant}-card`}>
       <div className="status-badge">{badge}</div>
       <h1>{title}</h1>
       <p>{description}</p>
+
+      {children}
 
       {sessionId ? <p className="session-id">Session: {sessionId}</p> : null}
 
