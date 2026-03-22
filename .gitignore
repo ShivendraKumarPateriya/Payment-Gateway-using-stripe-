@@ -3,9 +3,10 @@ myenv/
 venv/
 .env/
 
-# Environment variables
+# Environment variables (exclude actual secrets, keep template)
 .env
-.env.*
+.env.local
+.env.*.local
 
 # Python cache
 __pycache__/
